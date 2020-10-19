@@ -5,12 +5,19 @@ using Unity.Networking.Transport;
 using NetworkMessages;
 using System;
 using System.Text;
+using System.Collections.Generic;
+using System.Collections;
 
 public class NetworkServer : MonoBehaviour
 {
     public NetworkDriver m_Driver;
     public ushort serverPort;
     private NativeList<NetworkConnection> m_Connections;
+
+    private List<NetworkObjects.NetworkPlayer> allCubes;
+
+    float elapsedTime = 0.0f;
+    float updateTime = 1.0f;
 
     void Start ()
     {
@@ -23,6 +30,8 @@ public class NetworkServer : MonoBehaviour
             m_Driver.Listen();
 
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
+
+        allCubes = new List<NetworkObjects.NetworkPlayer>();
     }
 
     void SendToClient(string message, NetworkConnection c){
@@ -31,6 +40,8 @@ public class NetworkServer : MonoBehaviour
         writer.WriteBytes(bytes);
         m_Driver.EndSend(writer);
     }
+
+
     public void OnDestroy()
     {
         m_Driver.Dispose();
@@ -45,6 +56,38 @@ public class NetworkServer : MonoBehaviour
         // HandshakeMsg m = new HandshakeMsg();
         // m.player.id = c.InternalId.ToString();
         // SendToClient(JsonUtility.ToJson(m),c);        
+
+        SendCharacterToNewClient(c);
+
+    }
+
+    void SendCharacterToNewClient(NetworkConnection nc)
+    {
+        CreatePlayerMsg m = new CreatePlayerMsg(nc);
+        m.player.id = nc.InternalId.ToString();
+        allCubes.Add(m.player);
+        SendToClient(JsonUtility.ToJson(m), nc);
+    }
+
+    void PopulateClient(NetworkConnection nc)
+    {
+        PopulateMsg m = new PopulateMsg();
+        m.players = allCubes;
+        SendToClient(JsonUtility.ToJson(m), nc);
+    }
+
+    void UpdateClient(NetworkConnection nc)
+    {
+        ServerUpdateMsg m = new ServerUpdateMsg();
+        foreach(NetworkObjects.NetworkPlayer p in allCubes)
+        {
+            p.R = UnityEngine.Random.Range(0, 255);
+            p.G = UnityEngine.Random.Range(0, 255);
+            p.B = UnityEngine.Random.Range(0, 255);
+
+        }
+        m.players = allCubes;
+        SendToClient(JsonUtility.ToJson(m), nc);
     }
 
     void OnData(DataStreamReader stream, int i){
@@ -60,6 +103,15 @@ public class NetworkServer : MonoBehaviour
             break;
             case Commands.PLAYER_UPDATE:
             PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
+                foreach(NetworkObjects.NetworkPlayer p  in allCubes)
+                {
+                    if(p.id == puMsg.player.id)
+                    {
+                        p.X = puMsg.player.X;
+                        p.Y = puMsg.player.Y;
+                        p.Z = puMsg.player.Z;
+                    }
+                }
             Debug.Log("Player update message received!");
             break;
             case Commands.SERVER_UPDATE:
@@ -123,6 +175,18 @@ public class NetworkServer : MonoBehaviour
                 }
 
                 cmd = m_Driver.PopEventForConnection(m_Connections[i], out stream);
+            }
+        }
+
+        elapsedTime += Time.deltaTime;
+
+        if (elapsedTime >= updateTime)
+        {
+            elapsedTime = 0;
+
+            for (int i = 0; i < m_Connections.Length; i++)
+            {
+                UpdateClient(m_Connections[i]);
             }
         }
     }

@@ -5,6 +5,9 @@ using NetworkMessages;
 using NetworkObjects;
 using System;
 using System.Text;
+using System.Collections;
+using System.Collections.Generic;
+
 
 public class NetworkClient : MonoBehaviour
 {
@@ -13,6 +16,15 @@ public class NetworkClient : MonoBehaviour
     public string serverIP;
     public ushort serverPort;
 
+    public GameObject localCube;
+    public GameObject remoteCube;
+
+    public List<GameObject> activeCubes;
+
+    float timeElapsed;
+    public float updateTime;
+
+    bool CubeInstantiated = false;
     
     void Start ()
     {
@@ -22,6 +34,17 @@ public class NetworkClient : MonoBehaviour
         m_Connection = m_Driver.Connect(endpoint);
     }
     
+    IEnumerator SendRepeatHandshakeToServer()
+    {
+        while(true)
+        {
+            yield return new WaitForSeconds(2);
+            Debug.Log("Sending Handshake");
+            HandshakeMsg m = new HandshakeMsg();
+            m.player.id = m_Connection.InternalId.ToString();
+            SendToServer(JsonUtility.ToJson(m));
+        }
+    }
     void SendToServer(string message){
         var writer = m_Driver.BeginSend(m_Connection);
         NativeArray<byte> bytes = new NativeArray<byte>(Encoding.ASCII.GetBytes(message),Allocator.Temp);
@@ -36,6 +59,8 @@ public class NetworkClient : MonoBehaviour
         // HandshakeMsg m = new HandshakeMsg();
         // m.player.id = m_Connection.InternalId.ToString();
         // SendToServer(JsonUtility.ToJson(m));
+
+        StartCoroutine(SendRepeatHandshakeToServer());
     }
 
     void OnData(DataStreamReader stream){
@@ -55,7 +80,38 @@ public class NetworkClient : MonoBehaviour
             break;
             case Commands.SERVER_UPDATE:
             ServerUpdateMsg suMsg = JsonUtility.FromJson<ServerUpdateMsg>(recMsg);
-            Debug.Log("Server update message received!");
+                for (int i = 0; i < suMsg.players.Count; i++)
+                {
+                    bool spawned = false;
+                    foreach(GameObject p in activeCubes)
+                    {
+                        if(p.GetComponent<CubeBase>().id == suMsg.players[i].id)
+                        {
+                            spawned = true;
+
+                            p.GetComponent<CubeBase>().ColourChange(suMsg.players[i].R, suMsg.players[i].G, suMsg.players[i].B);
+                            if (p.GetComponent<PlayerCube>() == null)
+                            {
+                                p.transform.position = new Vector3(suMsg.players[i].X, suMsg.players[i].Y, suMsg.players[i].Z);
+                            }
+                        }
+                    }
+
+                    if(!spawned)
+                    {
+                        AddCube(suMsg.players[i]);
+                    }
+                }
+            //Debug.Log("Server update message received!");
+            break;
+            case Commands.CREATE_PLAYER:
+                // Create local cube
+                Debug.Log("CREATE PLAYER message received!");
+            CreatePlayerMsg myCubeMsg = JsonUtility.FromJson<CreatePlayerMsg>(recMsg);
+            SpawnMyCube(myCubeMsg);
+            break;
+            case Commands.POPULATE_CLIENT:
+                // Spawn all client cubes cubes
             break;
             default:
             Debug.Log("Unrecognized message received!");
@@ -63,6 +119,48 @@ public class NetworkClient : MonoBehaviour
         }
     }
 
+    void SpawnMyCube(CreatePlayerMsg m)
+    {
+        activeCubes = new List<GameObject>();
+
+        Vector3 pos = new Vector3(m.player.X, m.player.Y, m.player.Z);
+        Color newCol = new Color(m.player.R, m.player.G, m.player.B);
+        GameObject p1 = Instantiate(localCube, pos, new Quaternion(0, 0, 0, 0));
+        p1.GetComponent<CubeBase>().id = m.player.id;
+        activeCubes.Add(p1);
+
+        CubeInstantiated = true;
+    }
+
+    void AddCube(NetworkObjects.NetworkPlayer p)
+    {
+        Vector3 pos = new Vector3(p.X, p.Y, p.Z);
+        Color newCol = new Color(p.R, p.G, p.B);
+        GameObject p1 = Instantiate(remoteCube, pos, new Quaternion(0, 0, 0, 0));
+        p1.GetComponent<CubeBase>().id = p.id;
+        activeCubes.Add(p1);
+    }
+
+    void SendPosition()
+    {
+        if (CubeInstantiated)
+        {
+            PlayerUpdateMsg m = new PlayerUpdateMsg();
+
+            m.player.X = activeCubes[0].transform.position.x;
+            m.player.Y = activeCubes[0].transform.position.y;
+            m.player.Z = activeCubes[0].transform.position.z;
+
+            m.player.id = activeCubes[0].GetComponent<CubeBase>().id;
+
+            SendToServer(JsonUtility.ToJson(m));
+        }
+    }
+
+    void Populate()
+    {
+
+    }
     void Disconnect(){
         m_Connection.Disconnect(m_Driver);
         m_Connection = default(NetworkConnection);
@@ -79,6 +177,15 @@ public class NetworkClient : MonoBehaviour
     }   
     void Update()
     {
+        timeElapsed += Time.deltaTime;
+
+        if(timeElapsed >= updateTime)
+        {
+            timeElapsed = 0;
+
+            SendPosition();
+        }
+
         m_Driver.ScheduleUpdate().Complete();
 
         if (!m_Connection.IsCreated)

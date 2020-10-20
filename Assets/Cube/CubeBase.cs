@@ -28,7 +28,7 @@ public class CubeBase : MonoBehaviour
         if(timeSinceLastUpdate > 3.0f)
         {
             gameObject.SetActive(false);
-            DestroyImmediate(gameObject);
+            //DestroyImmediate(gameObject);
         }
     }
 

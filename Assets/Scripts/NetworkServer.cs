@@ -170,7 +170,6 @@ public class NetworkServer : MonoBehaviour
                 }
                 else if (cmd == NetworkEvent.Type.Disconnect)
                 {
-                    OnDisconnect(i);
 
                     //foreach (NetworkObjects.NetworkPlayer p in allCubes)
                     for(int p = 0; p < allCubes.Count; p++)
@@ -183,10 +182,13 @@ public class NetworkServer : MonoBehaviour
                             Debug.Log("Removing Cube");
                             allCubes.RemoveAt(p);
                             
-                            Debug.Log(allCubes[p].id);
-                            Debug.Log(allCubes.Count);
+                            //Debug.Log(allCubes[p].id);
+                            //Debug.Log(allCubes.Count);
                         }
                     }
+
+
+                    OnDisconnect(i);
                 }
 
                 cmd = m_Driver.PopEventForConnection(m_Connections[i], out stream);

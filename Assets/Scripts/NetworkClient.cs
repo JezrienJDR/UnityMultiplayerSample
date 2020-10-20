@@ -120,7 +120,7 @@ public class NetworkClient : MonoBehaviour
                     if (activeCubes[i].GetComponent<CubeBase>().id == dpMsg.droppedID)
                     {
                         activeCubes[i].SetActive(false);
-                        DestroyImmediate(activeCubes[i]);
+                        //DestroyImmediate(activeCubes[i]);
                         activeCubes.RemoveAt(i);
                         i--;
                     }

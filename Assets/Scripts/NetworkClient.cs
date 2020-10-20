@@ -113,11 +113,13 @@ public class NetworkClient : MonoBehaviour
             break;
             case Commands.DESTROY_PLAYER:
                 // 
+                Debug.Log("DESTROY_PLAYER message received!");
                 DisconnectedPlayerMsg dpMsg = JsonUtility.FromJson<DisconnectedPlayerMsg>(recMsg);
                 for(int i = 0; i < activeCubes.Count; i++)
                 {
                     if (activeCubes[i].GetComponent<CubeBase>().id == dpMsg.droppedID)
                     {
+                        activeCubes[i].SetActive(false);
                         DestroyImmediate(activeCubes[i]);
                         activeCubes.RemoveAt(i);
                         i--;

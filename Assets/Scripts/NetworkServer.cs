@@ -178,11 +178,13 @@ public class NetworkServer : MonoBehaviour
                 {
                     OnDisconnect(i);
 
-                    foreach (NetworkObjects.NetworkPlayer p in allCubes)
+                    //foreach (NetworkObjects.NetworkPlayer p in allCubes)
+                    for(int p = 0; p < allCubes.Count; p++)
                     {
-                        if(p.id == m_Connections[i].InternalId.ToString())
+                        if(allCubes[p].id == m_Connections[i].InternalId.ToString())
                         {
-                            allCubes.RemoveSwapBack(p);
+                            Debug.Log("Removing Cube");
+                            allCubes.RemoveAt(p);
                         }
                     }
                 }

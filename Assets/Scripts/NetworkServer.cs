@@ -79,13 +79,7 @@ public class NetworkServer : MonoBehaviour
     void UpdateClient(NetworkConnection nc)
     {
         ServerUpdateMsg m = new ServerUpdateMsg();
-        foreach(NetworkObjects.NetworkPlayer p in allCubes)
-        {
-            p.R = UnityEngine.Random.Range(0, 255);
-            p.G = UnityEngine.Random.Range(0, 255);
-            p.B = UnityEngine.Random.Range(0, 255);
-
-        }
+        
         m.players = allCubes;
         SendToClient(JsonUtility.ToJson(m), nc);
     }
@@ -99,7 +93,7 @@ public class NetworkServer : MonoBehaviour
         switch(header.cmd){
             case Commands.HANDSHAKE:
             HandshakeMsg hsMsg = JsonUtility.FromJson<HandshakeMsg>(recMsg);
-            Debug.Log("Handshake message received!");
+            //Debug.Log("Handshake message received!");
             break;
             case Commands.PLAYER_UPDATE:
             PlayerUpdateMsg puMsg = JsonUtility.FromJson<PlayerUpdateMsg>(recMsg);
@@ -112,7 +106,7 @@ public class NetworkServer : MonoBehaviour
                         p.Z = puMsg.player.Z;
                     }
                 }
-            Debug.Log("Player update message received!");
+            //Debug.Log("Player update message received!");
             break;
             case Commands.SERVER_UPDATE:
             ServerUpdateMsg suMsg = JsonUtility.FromJson<ServerUpdateMsg>(recMsg);
@@ -183,8 +177,14 @@ public class NetworkServer : MonoBehaviour
                     {
                         if(allCubes[p].id == m_Connections[i].InternalId.ToString())
                         {
+                            Debug.Log(allCubes[p].id);
+                            Debug.Log(allCubes.Count);
+                            
                             Debug.Log("Removing Cube");
                             allCubes.RemoveAt(p);
+                            
+                            Debug.Log(allCubes[p].id);
+                            Debug.Log(allCubes.Count);
                         }
                     }
                 }
@@ -198,6 +198,14 @@ public class NetworkServer : MonoBehaviour
         if (elapsedTime >= updateTime)
         {
             elapsedTime = 0;
+
+            foreach (NetworkObjects.NetworkPlayer p in allCubes)
+            {
+                p.R = UnityEngine.Random.Range(0, 255);
+                p.G = UnityEngine.Random.Range(0, 255);
+                p.B = UnityEngine.Random.Range(0, 255);
+
+            }
 
             for (int i = 0; i < m_Connections.Length; i++)
             {

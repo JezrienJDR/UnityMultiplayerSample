@@ -66,6 +66,16 @@ namespace NetworkMessages
         }
     }
 
+    public class DisconnectedPlayerMsg : NetworkHeader
+    {
+        public string droppedID;
+
+        public DisconnectedPlayerMsg(string id)
+        {
+            cmd = Commands.DESTROY_PLAYER;
+            droppedID = id;
+        }
+    }
 
     // Creates a new player object on the server, sends it to its own client to spawn the local player cube.
     [System.Serializable]

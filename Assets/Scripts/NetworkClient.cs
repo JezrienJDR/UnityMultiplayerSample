@@ -90,6 +90,7 @@ public class NetworkClient : MonoBehaviour
                             spawned = true;
 
                             p.GetComponent<CubeBase>().ColourChange(suMsg.players[i].R, suMsg.players[i].G, suMsg.players[i].B);
+
                             if (p.GetComponent<PlayerCube>() == null)
                             {
                                 p.transform.position = new Vector3(suMsg.players[i].X, suMsg.players[i].Y, suMsg.players[i].Z);
@@ -110,8 +111,18 @@ public class NetworkClient : MonoBehaviour
             CreatePlayerMsg myCubeMsg = JsonUtility.FromJson<CreatePlayerMsg>(recMsg);
             SpawnMyCube(myCubeMsg);
             break;
-            case Commands.POPULATE_CLIENT:
-                // Spawn all client cubes cubes
+            case Commands.DESTROY_PLAYER:
+                // 
+                DisconnectedPlayerMsg dpMsg = JsonUtility.FromJson<DisconnectedPlayerMsg>(recMsg);
+                for(int i = 0; i < activeCubes.Count; i++)
+                {
+                    if (activeCubes[i].GetComponent<CubeBase>().id == dpMsg.droppedID)
+                    {
+                        DestroyImmediate(activeCubes[i]);
+                        activeCubes.RemoveAt(i);
+                        i--;
+                    }
+                }
             break;
             default:
             Debug.Log("Unrecognized message received!");

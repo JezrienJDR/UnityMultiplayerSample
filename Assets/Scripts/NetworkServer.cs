@@ -126,6 +126,11 @@ public class NetworkServer : MonoBehaviour
 
     void OnDisconnect(int i){
         Debug.Log("Client disconnected from server");
+
+        DisconnectedPlayerMsg m = new DisconnectedPlayerMsg(m_Connections[i].InternalId.ToString());
+
+        SendToClient(JsonUtility.ToJson(m), m_Connections[i]);
+        
         m_Connections[i] = default(NetworkConnection);
     }
 
@@ -172,6 +177,14 @@ public class NetworkServer : MonoBehaviour
                 else if (cmd == NetworkEvent.Type.Disconnect)
                 {
                     OnDisconnect(i);
+
+                    foreach (NetworkObjects.NetworkPlayer p in allCubes)
+                    {
+                        if(p.id == m_Connections[i].InternalId.ToString())
+                        {
+                            allCubes.RemoveSwapBack(p);
+                        }
+                    }
                 }
 
                 cmd = m_Driver.PopEventForConnection(m_Connections[i], out stream);
